@@ -1,5 +1,13 @@
 local template = require 'resty.template'
-local Errors = require "kong.db.errors"
+local wrap_schema_error
+
+local require_succeeded, Errors = pcall(require, 'kong.db.errors')
+if (require_succeeded) then
+    wrap_schema_error = Errors.schema_violation
+else
+    Errors = require 'kong.dao.errors'
+    wrap_schema_error = Errors.schema
+end
 
 function check_template(schema, config, dao, is_updating)
   if config.request_template then
@@ -8,7 +16,7 @@ function check_template(schema, config, dao, is_updating)
     end)
 
     if status ~= true then
-      return false, Errors:schema_violation(err)
+      return false, wrap_schema_error(err)
     end
 
     return status, err
@@ -20,7 +28,7 @@ function check_template(schema, config, dao, is_updating)
     end)
 
     if status ~= true then
-      return false, Errors:schema_violation(err)
+      return false, wrap_schema_error(err)
     end
 
     return status, err
